@@ -1,7 +1,7 @@
 import json
 import os
 
-from stock_data_call import get_stock_data
+from utils import (get_stock_data, clean_stock_data)
 
 def lambda_handler(event, context):
     """Sample pure Lambda function
@@ -25,23 +25,19 @@ def lambda_handler(event, context):
         Return doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html
     """
 
-    # try:
-    #     ip = requests.get("http://checkip.amazonaws.com/")
-    # except requests.RequestException as e:
-    #     # Send some context about this error to Lambda Logs
-    #     print(e)
-
-    #     raise e
-
-    response = get_stock_data(
+    api_response = get_stock_data(
         api_key = os.environ['ALPHAVANTAGE_API_KEY'],
         symbols = ['IBM']
+    )
+    
+    clean_data = clean_stock_data(
+        data = api_response
     )
 
     return {
         "statusCode": 200,
         "body": json.dumps({
-            "message": response
+            "message": clean_data
             # "location": ip.text.replace("\n", "")
         }),
     }
