@@ -1,5 +1,11 @@
 import requests
 import json
+import logging
+
+from botocore.exceptions import ClientError
+
+logger = logging.getLogger()
+logger.setLevel('INFO')
 
 def get_stock_data(api_key: str, symbols: list) -> dict:
   """
@@ -51,18 +57,58 @@ def clean_stock_data(data: dict) -> list:
       
       entries.append(
         {
-          'pk': f'{key} {str(stock_data)}', # The Primary Key, example: IBM 2024-03-26
-          'symbol': key,
-          'date': str(stock_data),
-          'open_price': data[key][str(stock_data)]['1. open'], # This is how we access the opening price
-          'close_price': data[key][str(stock_data)]['4. close'], # This is how we access the closing price
-          'volume': data[key][str(stock_data)]['5. volume'] # This is how we access the trade volume
+          'PutRequest': {
+            'Item': {
+              'pk': { 'S': f'{key} {str(stock_data)}' }, # The Primary Key, example: IBM 2024-03-26
+              'symbol': { 'S': key },
+              'date': { 'S': str(stock_data) },
+              'open_price': { 'N': data[key][str(stock_data)]['1. open'] }, # This is how we access the opening price
+              'close_price': { 'N': data[key][str(stock_data)]['4. close'] }, # This is how we access the closing price
+              'volume': { 'N': data[key][str(stock_data)]['5. volume'] } # This is how we access the trade volume
+            }
+          }
         }
       )
       
     return entries
-    
-    
-    
+
+def batch_write_stocks(db_client, table_name: str, stock_data: list):
+  """
+  Takes the data returned from `clean_stock_data()` and uploads it to DynamoDB.
   
+  Parameters
+  ----------
+  `db_client`: The DynamoDB client, aka `boto3.client('dynamodb')`
   
+  `table_name`: The name of the table that will receive the data
+  
+  `stock_data`: The list that is returned from `clean_stock_data()`
+  """
+  
+  try:
+    
+    # Make sure that we break the list down into batches of 25 for the batch_write_item operation
+    sublist_size = 25
+    
+    sublist_data = [ stock_data[i : i + sublist_size] for i in range(0, len(stock_data), sublist_size) ]
+    
+    # Uploading the batches
+    for batch in sublist_data:
+      
+      db_client.batch_write_item(
+        RequestItems = {
+          table_name: batch
+        }
+      )
+        
+    return 'Data successfully uploaded.'
+        
+  except ClientError as err:
+    
+    logger.error(
+        "Couldn't load data into table %s. Here's why: %s: %s",
+        table_name,
+        err.response["Error"]["Code"],
+        err.response["Error"]["Message"],
+    )
+    raise
