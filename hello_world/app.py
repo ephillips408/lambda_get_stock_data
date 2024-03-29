@@ -36,7 +36,7 @@ def lambda_handler(event, context):
     # Get the stock data from the API
     api_response = get_stock_data(
         api_key = os.environ['ALPHAVANTAGE_API_KEY'],
-        symbols = ['IBM']
+        symbols = ['AMD', 'INTC']
     )
     
     logger.info('Successfully return the data from the API')

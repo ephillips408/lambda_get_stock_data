@@ -32,7 +32,7 @@ def get_stock_data(api_key: str, symbols: list) -> dict:
 
     results_dict[symbol] = json_data['Time Series (Daily)']
 
-    return results_dict
+  return results_dict
 
 def clean_stock_data(data: dict) -> list:
   """
@@ -70,7 +70,7 @@ def clean_stock_data(data: dict) -> list:
         }
       )
       
-    return entries
+  return entries
 
 def batch_write_stocks(db_client, table_name: str, stock_data: list):
   """
